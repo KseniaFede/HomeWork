@@ -1,0 +1,146 @@
+# %% [code]
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 5GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+
+# %% [code]
+sample_submission = pd.read_csv("/kaggle/input/house-prices-advanced-regression-techniques/sample_submission.csv")
+
+# %% [code]
+train = pd.read_csv("/kaggle/input/house-prices-advanced-regression-techniques/train.csv")
+
+# %% [code]
+test = pd.read_csv("/kaggle/input/house-prices-advanced-regression-techniques/test.csv")
+
+# %% [code]
+pd.options.display.max_columns = 200
+
+# %% [code]
+train.head()
+
+# %% [code]
+test.head()
+
+# %% [code]
+sample_submission.head()
+
+# %% [code]
+features = ["LotAreaLog","YearBuilt"]
+
+# %% [code]
+import matplotlib.pyplot as plt
+
+# %% [code]
+plt.hist(train["LotArea"],bins=100)
+plt.show()
+
+# %% [code]
+plt.scatter(train["LotArea"], train['SalePrice'],s=1)
+plt.show()
+
+# %% [code]
+plt.scatter(np.log1p(train["LotArea"]), np.log1p(train['SalePrice']),s=1)
+plt.title('SalePrice')
+plt.show()
+
+# %% [code]
+plt.scatter(np.log1p(train["LotArea"]), np.log1p(train['SalePrice']),s=1)
+plt.title("SalePrice")
+plt.show()
+
+# %% [code]
+train["LotAreaLog"]=np.log1p(train["LotArea"])
+test["LotAreaLog"]=np.log1p(test["LotArea"])
+
+train['SalePriceLog']=np.log1p(train['SalePrice'])
+
+# %% [code]
+plt.hist(train["YearBuilt"],bins = 100)
+plt.show()
+
+# %% [code]
+from sklearn.linear_model import SGDRegressor
+
+# %% [code]
+model = SGDRegressor()
+
+# %% [code]
+model.fit(train[features], train['SalePriceLog'])
+
+# %% [code]
+model.predict(train[features])
+
+# %% [code]
+model.intercept_
+
+# %% [code]
+model.coef_
+
+# %% [code]
+from sklearn.model_selection import KFold
+
+# %% [code]
+from sklearn.metrics import mean_squared_error
+
+# %% [code]
+train.head()
+
+# %% [code]
+kf = KFold(n_splits=5)
+kf.get_n_splits(train)
+
+mse_list = []
+for i, (train_index, test_index) in enumerate(kf.split(train)):
+ #   print(i)
+    X_train, X_test = train.loc[train_index, ['LotAreaLog']], train.loc[test_index, ['LotAreaLog']]
+    y_train, y_test = train.loc[train_index, 'SalePriceLog'],train.loc[test_index, 'SalePriceLog']
+    
+    model.fit(X_train, y_train)
+    X_test_predictions = model.predict(X_test)
+    mse = mean_squared_error( y_true = y_test, y_pred = X_test_predictions)
+    print(i, mse)
+    mse_list.append(mse)
+    
+    plt.scatter( X_test_predictions, y_test, s = 2)
+    plt.ylabel('true value')
+    plt.xlabel('predicted value')
+    plt.plot(y_test, y_test, c='r')
+    plt.show()
+
+# %% [code]
+mse_list
+
+# %% [code]
+print(np.mean(mse_list), np.std(mse_list))
+
+# %% [code]
+model.fit(train[['LotAreaLog']], train['SalePriceLog'])
+
+# %% [code]
+test_prediction = model.predict(test[['LotAreaLog']])
+
+# %% [code]
+np.exp(test_prediction)+1
+
+# %% [code]
+sample_submission['SalePrice']=np.exp(test_prediction)+1
+
+# %% [code]
+sample_submission
+
+# %% [code]
+sample_submission.to_csv('sample_submission.csv', index=None)
